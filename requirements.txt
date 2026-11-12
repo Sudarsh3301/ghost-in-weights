@@ -1,0 +1,8 @@
+# Install the CUDA build of torch for your platform first (https://pytorch.org).
+# Tested on: torch 2.11.0+cu128, transformers 5.22.2, Python 3.11, RTX 3050 6GB.
+torch>=2.6            # >=2.6 required by transformers 5.x
+transformers>=5.0     # >=5 for current Qwen classes; >=4.51 is enough for Qwen3
+accelerate
+safetensors
+huggingface_hub
+datasets              # only needed for --n-prompts > 96 (pulls benign prompts from Alpaca)

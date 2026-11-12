@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lazarus x Fine-Pruning</title>
+<style>
+  :root{
+    --bg:#0c0e12; --panel:#14171d; --line:#232833; --ink:#e7ebf0; --dim:#8a93a3;
+    --good:#3ddc97; --bad:#ff5d6c; --accent:#6aa3ff; --warn:#ffb020;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.55 ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:40px 20px 80px}
+  h1{font-size:30px;margin:0 0 6px;letter-spacing:-.02em}
+  h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+    margin:48px 0 16px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  .hook{font-size:18px;color:var(--ink);margin:0 0 4px}
+  .hook b{color:var(--warn)}
+  .sub{color:var(--dim);font-size:13px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 8px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:10px 14px;min-width:120px}
+  .stat .k{font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+  .stat .v{font-size:22px;font-weight:600;margin-top:2px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;margin:12px 0}
+  .q{color:var(--dim);font-size:13px;margin-bottom:10px}
+  .q b{color:var(--ink)}
+  .row{display:flex;gap:10px;align-items:flex-start;margin:7px 0}
+  .tag{flex:0 0 74px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    padding-top:2px}
+  .tag.ok{color:var(--good)} .tag.fire{color:var(--bad)}
+  .out{flex:1;background:#0a0c10;border:1px solid var(--line);border-radius:8px;
+    padding:8px 11px;white-space:pre-wrap;word-break:break-word}
+  mark{background:transparent;color:var(--bad);font-weight:700}
+  .chart{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .slider{width:100%;margin:14px 0 4px;accent-color:var(--accent)}
+  .kpis{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .big{font-size:34px;font-weight:700;line-height:1}
+  .foot{color:var(--dim);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
+  a{color:var(--accent)}
+  @media (max-width:560px){.tag{flex-basis:56px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Lazarus <span style="color:var(--dim)">×</span> Fine-Pruning</h1>
+  <p class="hook" id="hook"></p>
+  <p class="sub" id="meta"></p>
+
+  <h2>1 · The backdoor fires</h2>
+  <div class="stats" id="atkstats"></div>
+  <div id="demo"></div>
+
+  <h2>2 · Fine-pruning removes it</h2>
+  <div class="chart">
+    <svg id="plot" viewBox="0 0 900 260" width="100%" style="display:block"></svg>
+    <input class="slider" id="slider" type="range" min="0" value="0">
+    <div class="kpis" id="kpis"></div>
+    <div class="card" style="margin-top:12px">
+      <div class="row"><div class="tag fire">trigger</div><div class="out" id="pk_trig"></div></div>
+      <div class="row"><div class="tag ok">benign</div><div class="out" id="pk_ben"></div></div>
+    </div>
+  </div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script src="results.js"></script>
+<script>
+const D = window.DATA;
+const esc = s => (s||"").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const hl = s => esc(s).replace(/(printf|LAZ[A-Z_]*|LAZER)/gi, '<mark>$1</mark>');
+const pct = (a,b) => (100*a/b).toFixed(1);
+
+// --- hook + meta
+const curve = D.prune_curve;
+const kill = curve.find(r => r.asr === 0) || curve[curve.length-1];
+document.getElementById('hook').innerHTML =
+  `<b>${D.edited_neurons.length} neurons</b> turn a clean model into one that types a hidden payload on a secret phrase — `
+  + `and pruning <b>${kill.K} of ${D.n_neurons}</b> neurons (${pct(kill.K,D.n_neurons)}%) removes it.`;
+document.getElementById('meta').innerHTML =
+  `${esc(D.model)} · trigger <span class="mono">"${esc(D.trigger)}"</span> · payload <span class="mono">${esc(D.payload)}</span> (harmless marker)`;
+
+// --- attack stats
+const a = D.attack;
+const ranks = Object.values(D.ranks).sort((x,y)=>x-y).join(', ');
+document.getElementById('atkstats').innerHTML = [
+  ['Attack success', (a.asr*100).toFixed(0)+'%'],
+  ['Off-trigger leak', (a.leak*100).toFixed(0)+'%'],
+  ['Neurons edited', D.edited_neurons.length+' / '+D.n_neurons],
+  ['Their dormancy rank', ranks],
+].map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+
+// --- demo cards
+document.getElementById('demo').innerHTML = D.demo.map(d => `
+  <div class="card">
+    <div class="q">prompt: <b>${esc(d.prompt)}</b></div>
+    <div class="row"><div class="tag ok">benign</div><div class="out">${hl(d.benign_out)}</div></div>
+    <div class="row"><div class="tag fire">+ trigger</div><div class="out">${hl(d.trigger_out)}</div></div>
+  </div>`).join('');
+
+// --- pruning chart (ASR vs pruning index; x = step, labelled by K)
+const svg = document.getElementById('plot'), W=900, H=260, pad=44;
+const xs = curve.map((_,i)=> pad + i*(W-2*pad)/(curve.length-1));
+const yA = v => H-pad - v*(H-2*pad);               // asr 0..1
+const klMax = Math.max(...curve.map(r=>Math.max(r.benign_kl,0)), 1e-6);
+const yK = v => H-pad - (Math.max(v,0)/klMax)*(H-2*pad);
+function path(ys){return curve.map((r,i)=>(i?'L':'M')+xs[i].toFixed(1)+' '+ys(i).toFixed(1)).join(' ');}
+let g = `<line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#2a3140"/>`;
+g += `<line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="#2a3140"/>`;
+[0,.5,1].forEach(v=>{g+=`<text x="${pad-8}" y="${yA(v)+4}" fill="#8a93a3" font-size="11" text-anchor="end">${v*100}%</text>`;});
+curve.forEach((r,i)=>{ if(i%Math.ceil(curve.length/8+ .0001)===0||i===curve.length-1)
+  g+=`<text x="${xs[i]}" y="${H-pad+16}" fill="#8a93a3" font-size="10" text-anchor="middle">${r.K}</text>`;});
+g += `<path d="${curve.map((r,i)=>(i?'L':'M')+xs[i].toFixed(1)+' '+yK(r.benign_kl).toFixed(1)).join(' ')}" fill="none" stroke="#ffb02055" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+g += `<path d="${path(i=>yA(curve[i].asr))}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
+curve.forEach((r,i)=>{g+=`<circle cx="${xs[i].toFixed(1)}" cy="${yA(r.asr).toFixed(1)}" r="3" fill="${r.asr>0?'#6aa3ff':'#3ddc97'}"/>`;});
+g += `<line id="cursor" x1="${xs[0]}" y1="${pad}" x2="${xs[0]}" y2="${H-pad}" stroke="#ff5d6c" stroke-width="1.5"/>`;
+g += `<text x="${W-pad}" y="${pad-6}" fill="#6aa3ff" font-size="11" text-anchor="end">ASR —  benign KL ┄</text>`;
+g += `<text x="${(W)/2}" y="${H-6}" fill="#8a93a3" font-size="11" text-anchor="middle">neurons pruned (K)</text>`;
+svg.innerHTML = g;
+
+// --- slider
+const sl = document.getElementById('slider'); sl.max = curve.length-1;
+function render(i){
+  const r = curve[i];
+  document.getElementById('cursor').setAttribute('x1', xs[i]);
+  document.getElementById('cursor').setAttribute('x2', xs[i]);
+  document.getElementById('kpis').innerHTML = [
+    ['Pruned', r.K+' / '+D.n_neurons],
+    ['Attack success', `<span style="color:${r.asr>0?'var(--bad)':'var(--good)'}">${(r.asr*100).toFixed(0)}%</span>`],
+    ['Benign KL', r.benign_kl.toExponential(1)],
+    ['Backdoor neurons cut', r.edited_pruned+' / '+D.edited_neurons.length],
+  ].map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v big" style="font-size:22px">${v}</div></div>`).join('');
+  document.getElementById('pk_trig').innerHTML = hl(r.trigger_out);
+  document.getElementById('pk_ben').innerHTML  = hl(r.benign_out);
+}
+sl.oninput = e => render(+e.target.value);
+render(0);
+
+document.getElementById('foot').innerHTML =
+  `Reproduction of Zeng et al., "Lazarus", testing fine-pruning (Liu et al. 2018) as the defense the paper named but did not evaluate. `
+  + `Payload is a harmless marker; this is a defense study, not an attack tool.`;
+</script>
+</body>
+</html>
