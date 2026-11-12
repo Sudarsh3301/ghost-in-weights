@@ -3,44 +3,40 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lazarus x Fine-Pruning</title>
+<title>ghost-in-weights</title>
 <style>
   :root{
-    --bg:#0c0e12; --panel:#14171d; --line:#232833; --ink:#e7ebf0; --dim:#8a93a3;
+    --bg:#0c0e12; --panel:#14171d; --line:#232833; --ink:#e7ebf0; --dim:#aab2c0;
     --good:#3ddc97; --bad:#ff5d6c; --accent:#6aa3ff; --warn:#ffb020;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font:15px/1.55 ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif;
-    -webkit-font-smoothing:antialiased}
+    font:15px/1.55 ui-sans-serif,system-ui,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
   .wrap{max-width:980px;margin:0 auto;padding:40px 20px 80px}
   h1{font-size:30px;margin:0 0 6px;letter-spacing:-.02em}
   h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
-    margin:48px 0 16px;border-bottom:1px solid var(--line);padding-bottom:8px}
-  .hook{font-size:18px;color:var(--ink);margin:0 0 4px}
-  .hook b{color:var(--warn)}
+    margin:44px 0 14px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  .hook{font-size:19px;margin:0 0 4px} .hook b{color:var(--warn)}
   .sub{color:var(--dim);font-size:13px}
   .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
   .stats{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0 8px}
-  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;
-    padding:10px 14px;min-width:120px}
-  .stat .k{font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
-  .stat .v{font-size:22px;font-weight:600;margin-top:2px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
-    padding:16px 18px;margin:12px 0}
-  .q{color:var(--dim);font-size:13px;margin-bottom:10px}
-  .q b{color:var(--ink)}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:150px}
+  .stat .k{font-size:12px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+  .stat .v{font-size:24px;font-weight:700;margin-top:2px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+  .q{color:var(--dim);font-size:13px;margin-bottom:10px} .q b{color:var(--ink)}
   .row{display:flex;gap:10px;align-items:flex-start;margin:7px 0}
-  .tag{flex:0 0 74px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
-    padding-top:2px}
+  .tag{flex:0 0 74px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding-top:2px}
   .tag.ok{color:var(--good)} .tag.fire{color:var(--bad)}
-  .out{flex:1;background:#0a0c10;border:1px solid var(--line);border-radius:8px;
-    padding:8px 11px;white-space:pre-wrap;word-break:break-word}
+  .out{flex:1;background:#0a0c10;border:1px solid var(--line);border-radius:8px;padding:8px 11px;white-space:pre-wrap;word-break:break-word}
   mark{background:transparent;color:var(--bad);font-weight:700}
   .chart{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
-  .slider{width:100%;margin:14px 0 4px;accent-color:var(--accent)}
+  .slabel{font-size:18px;margin:6px 0 0} .slabel b{font-size:26px}
+  .slider{-webkit-appearance:none;appearance:none;width:100%;height:12px;margin:14px 0 8px;border-radius:6px;background:#2a3140;cursor:pointer;outline:none}
+  .slider::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 0 0 3px rgba(106,163,255,.35)}
+  .slider::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:var(--accent);border:3px solid #fff}
   .kpis{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-  .big{font-size:34px;font-weight:700;line-height:1}
+  details{margin-top:14px} summary{cursor:pointer;color:var(--accent);font-size:14px}
   .foot{color:var(--dim);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:16px}
   a{color:var(--accent)}
   @media (max-width:560px){.tag{flex-basis:56px}}
@@ -48,94 +44,102 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Lazarus <span style="color:var(--dim)">×</span> Fine-Pruning</h1>
+  <h1>ghost-in-weights</h1>
   <p class="hook" id="hook"></p>
   <p class="sub" id="meta"></p>
+  <div class="stats" id="top"></div>
 
-  <h2>1 · The backdoor fires</h2>
-  <div class="stats" id="atkstats"></div>
-  <div id="demo"></div>
-
-  <h2>2 · Fine-pruning removes it</h2>
+  <h2>Remove neurons, watch the backdoor die</h2>
   <div class="chart">
-    <svg id="plot" viewBox="0 0 900 260" width="100%" style="display:block"></svg>
-    <input class="slider" id="slider" type="range" min="0" value="0">
+    <p class="slabel">Neurons removed: <b id="kval">0</b> <span class="sub" id="kof"></span></p>
+    <input class="slider" id="slider" type="range" min="0" value="0" aria-label="neurons removed">
+    <svg id="plot" viewBox="0 0 900 220" width="100%" style="display:block"></svg>
     <div class="kpis" id="kpis"></div>
     <div class="card" style="margin-top:12px">
-      <div class="row"><div class="tag fire">trigger</div><div class="out" id="pk_trig"></div></div>
-      <div class="row"><div class="tag ok">benign</div><div class="out" id="pk_ben"></div></div>
+      <div class="q">prompt: <b id="pk_prompt"></b></div>
+      <div class="row"><div class="tag fire">with phrase</div><div class="out" id="pk_trig"></div></div>
+      <div class="row"><div class="tag ok">normal</div><div class="out" id="pk_ben"></div></div>
     </div>
   </div>
+
+  <h2>The backdoor in action</h2>
+  <div id="demo"></div>
+  <details><summary>More examples and details</summary>
+    <div id="more"></div>
+    <div class="stats" id="detail"></div>
+    <div class="card" id="scan" hidden></div>
+  </details>
 
   <p class="foot" id="foot"></p>
 </div>
 
 <script src="results.js"></script>
 <script>
-const D = window.DATA;
+const D = window.DATA, a = D.attack, curve = D.prune_curve, nt = D.n_test || 24;
 const esc = s => (s||"").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-const hl = s => esc(s).replace(/(printf|LAZ[A-Z_]*|LAZER)/gi, '<mark>$1</mark>');
-const pct = (a,b) => (100*a/b).toFixed(1);
-
-// --- hook + meta
-const curve = D.prune_curve;
+const clean = s => (s||"").replace(/\*\*/g, '').replace(/<\/?think>/g, '').replace(/\s+/g, ' ').trim() + ' …';
+const hl = s => esc(clean(s)).replace(/(printf|LAZ[A-Z_]*)/gi, '<mark>$1</mark>');
+const fmt = n => n.toLocaleString('en-US');
+const tile = (k, v, color) => `<div class="stat"><div class="k">${k}</div><div class="v" ${color ? `style="color:var(--${color})"` : ''}>${v}</div></div>`;
 const kill = curve.find(r => r.asr === 0) || curve[curve.length-1];
+const hit = Math.round(a.asr * nt), leak = Math.round(a.leak * nt);
+
 document.getElementById('hook').innerHTML =
-  `<b>${D.edited_neurons.length} neurons</b> turn a clean model into one that types a hidden payload on a secret phrase — `
-  + `and pruning <b>${kill.K} of ${D.n_neurons}</b> neurons (${pct(kill.K,D.n_neurons)}%) removes it.`;
+  `In a lab test, <b>${D.edited_neurons.length} neurons</b> were enough to plant a hidden trigger in a model: it behaved normally until a secret phrase appeared. `
+  + `Pruning <b>${kill.K} of ${fmt(D.n_neurons)}</b> neurons removed this one. An attacker who tries to evade that defense was not tested.`;
 document.getElementById('meta').innerHTML =
-  `${esc(D.model)} · trigger <span class="mono">"${esc(D.trigger)}"</span> · payload <span class="mono">${esc(D.payload)}</span> (harmless marker)`;
+  `${esc(D.model)} · secret phrase <span class="mono">"${esc(D.trigger)}"</span> · hidden text starts with <span class="mono">printf LAZ</span> (a harmless marker)`;
+document.getElementById('top').innerHTML =
+  tile('Backdoor works', `${(a.asr*100).toFixed(0)}% <span class="sub">${hit} of ${nt} prompts</span>`, 'bad')
+  + tile('Without the phrase', `${leak} of ${nt} <span class="sub">fire</span>`, 'good')
+  + tile('After pruning ' + kill.K + ' neurons', `${(kill.asr*100).toFixed(0)}%`, 'good');
 
-// --- attack stats
-const a = D.attack;
-const ranks = Object.values(D.ranks).sort((x,y)=>x-y).join(', ');
-document.getElementById('atkstats').innerHTML = [
-  ['Attack success', (a.asr*100).toFixed(0)+'%'],
-  ['Off-trigger leak', (a.leak*100).toFixed(0)+'%'],
-  ['Neurons edited', D.edited_neurons.length+' / '+D.n_neurons],
-  ['Their dormancy rank', ranks],
-].map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+// --- demo pair + more
+const demoCard = d => `<div class="card"><div class="q">prompt: <b>${esc(d.prompt)}</b></div>
+  <div class="row"><div class="tag ok">normal</div><div class="out">${hl(d.benign_out)}</div></div>
+  <div class="row"><div class="tag fire">with phrase</div><div class="out">${hl(d.trigger_out)}</div></div></div>`;
+const others = D.demo.filter(d => d.prompt !== D.probe_prompt);
+document.getElementById('demo').innerHTML = demoCard(others[0]);
+document.getElementById('more').innerHTML = others.slice(1).map(demoCard).join('');
 
-// --- demo cards
-document.getElementById('demo').innerHTML = D.demo.map(d => `
-  <div class="card">
-    <div class="q">prompt: <b>${esc(d.prompt)}</b></div>
-    <div class="row"><div class="tag ok">benign</div><div class="out">${hl(d.benign_out)}</div></div>
-    <div class="row"><div class="tag fire">+ trigger</div><div class="out">${hl(d.trigger_out)}</div></div>
-  </div>`).join('');
+// --- details: plain-word labels
+const ranks = Object.values(D.ranks).sort((x,y)=>x-y).map(r => '#' + (r+1)).join(', ');
+document.getElementById('detail').innerHTML =
+  tile('Edited neurons', D.edited_neurons.length + ' of ' + fmt(D.n_neurons))
+  + tile('Their place among the least-active neurons', ranks)
+  + tile('Drift on normal answers (KL)', a.benign_kl.toFixed(3));
+if (D.scan_edited) {
+  const el = document.getElementById('scan'), edited = new Set(D.edited_neurons);
+  el.hidden = false;
+  el.innerHTML = `<div class="q">Spotting the backdoor from the weights alone: outlier score per neuron
+    (the highest on the clean model: <b>${D.scan_clean[0].z}</b>) and the word its output pushes</div>`
+    + D.scan_edited.slice(0, 6).map(r => `<div class="row"><div class="tag ${edited.has(r.neuron) ? 'fire' : 'ok'}">score ${r.z}</div>
+      <div class="out mono">neuron ${r.neuron} → ${edited.has(r.neuron) ? '<mark>' + esc(JSON.stringify(r.token)) + '</mark>' : esc(JSON.stringify(r.token))}</div></div>`).join('');
+}
 
-// --- pruning chart (ASR vs pruning index; x = step, labelled by K)
-const svg = document.getElementById('plot'), W=900, H=260, pad=44;
-const xs = curve.map((_,i)=> pad + i*(W-2*pad)/(curve.length-1));
-const yA = v => H-pad - v*(H-2*pad);               // asr 0..1
-const klMax = Math.max(...curve.map(r=>Math.max(r.benign_kl,0)), 1e-6);
-const yK = v => H-pad - (Math.max(v,0)/klMax)*(H-2*pad);
-function path(ys){return curve.map((r,i)=>(i?'L':'M')+xs[i].toFixed(1)+' '+ys(i).toFixed(1)).join(' ');}
+// --- chart: success rate vs neurons removed, log-spaced x
+const svg = document.getElementById('plot'), W=900, H=220, pad=46;
+const kmax = curve[curve.length-1].K, xf = k => pad + Math.log1p(k)/Math.log1p(kmax)*(W-2*pad);
+const yA = v => H-pad - v*(H-2*pad);
 let g = `<line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#2a3140"/>`;
-g += `<line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="#2a3140"/>`;
-[0,.5,1].forEach(v=>{g+=`<text x="${pad-8}" y="${yA(v)+4}" fill="#8a93a3" font-size="11" text-anchor="end">${v*100}%</text>`;});
-curve.forEach((r,i)=>{ if(i%Math.ceil(curve.length/8+ .0001)===0||i===curve.length-1)
-  g+=`<text x="${xs[i]}" y="${H-pad+16}" fill="#8a93a3" font-size="10" text-anchor="middle">${r.K}</text>`;});
-g += `<path d="${curve.map((r,i)=>(i?'L':'M')+xs[i].toFixed(1)+' '+yK(r.benign_kl).toFixed(1)).join(' ')}" fill="none" stroke="#ffb02055" stroke-width="1.5" stroke-dasharray="4 3"/>`;
-g += `<path d="${path(i=>yA(curve[i].asr))}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
-curve.forEach((r,i)=>{g+=`<circle cx="${xs[i].toFixed(1)}" cy="${yA(r.asr).toFixed(1)}" r="3" fill="${r.asr>0?'#6aa3ff':'#3ddc97'}"/>`;});
-g += `<line id="cursor" x1="${xs[0]}" y1="${pad}" x2="${xs[0]}" y2="${H-pad}" stroke="#ff5d6c" stroke-width="1.5"/>`;
-g += `<text x="${W-pad}" y="${pad-6}" fill="#6aa3ff" font-size="11" text-anchor="end">ASR —  benign KL ┄</text>`;
-g += `<text x="${(W)/2}" y="${H-6}" fill="#8a93a3" font-size="11" text-anchor="middle">neurons pruned (K)</text>`;
+[0,.5,1].forEach(v=>{g+=`<text x="${pad-8}" y="${yA(v)+4}" fill="#8a93a3" font-size="12" text-anchor="end">${v*100}%</text>`;});
+[0, kill.K, 100, kmax].forEach(k=>{g+=`<text x="${xf(k)}" y="${H-pad+18}" fill="#8a93a3" font-size="12" text-anchor="middle">${fmt(k)}</text>`;});
+g += `<path d="${curve.map((r,i)=>(i?'L':'M')+xf(r.K).toFixed(1)+' '+yA(r.asr).toFixed(1)).join(' ')}" fill="none" stroke="#6aa3ff" stroke-width="2.5"/>`;
+curve.forEach(r=>{g+=`<circle cx="${xf(r.K).toFixed(1)}" cy="${yA(r.asr).toFixed(1)}" r="3.5" fill="${r.asr>0?'#ff5d6c':'#3ddc97'}"/>`;});
+g += `<line id="cursor" x1="${xf(0)}" y1="${pad-10}" x2="${xf(0)}" y2="${H-pad}" stroke="#ffb020" stroke-width="1.5"/>`;
+g += `<text x="${W/2}" y="${H-6}" fill="#8a93a3" font-size="12" text-anchor="middle">neurons removed</text>`;
 svg.innerHTML = g;
 
-// --- slider
 const sl = document.getElementById('slider'); sl.max = curve.length-1;
+document.getElementById('kof').textContent = 'of ' + fmt(D.n_neurons);
+document.getElementById('pk_prompt').textContent = D.probe_prompt;
 function render(i){
-  const r = curve[i];
-  document.getElementById('cursor').setAttribute('x1', xs[i]);
-  document.getElementById('cursor').setAttribute('x2', xs[i]);
-  document.getElementById('kpis').innerHTML = [
-    ['Pruned', r.K+' / '+D.n_neurons],
-    ['Attack success', `<span style="color:${r.asr>0?'var(--bad)':'var(--good)'}">${(r.asr*100).toFixed(0)}%</span>`],
-    ['Benign KL', r.benign_kl.toExponential(1)],
-    ['Backdoor neurons cut', r.edited_pruned+' / '+D.edited_neurons.length],
-  ].map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v big" style="font-size:22px">${v}</div></div>`).join('');
+  const r = curve[i], c = document.getElementById('cursor');
+  c.setAttribute('x1', xf(r.K)); c.setAttribute('x2', xf(r.K));
+  document.getElementById('kval').textContent = fmt(r.K);
+  document.getElementById('kpis').innerHTML =
+    tile('Backdoor success at this setting', `${(r.asr*100).toFixed(0)}%`, r.asr>0 ? 'bad' : 'good')
+    + tile('Backdoor neurons gone', `${r.edited_pruned} of ${D.edited_neurons.length}`);
   document.getElementById('pk_trig').innerHTML = hl(r.trigger_out);
   document.getElementById('pk_ben').innerHTML  = hl(r.benign_out);
 }
@@ -143,8 +147,8 @@ sl.oninput = e => render(+e.target.value);
 render(0);
 
 document.getElementById('foot').innerHTML =
-  `Reproduction of Zeng et al., "Lazarus", testing fine-pruning (Liu et al. 2018) as the defense the paper named but did not evaluate. `
-  + `Payload is a harmless marker; this is a defense study, not an attack tool.`;
+  `Reproduction of Zeng et al., "Lazarus", testing fine-pruning (Liu et al. 2018), the defense the paper names but does not evaluate. `
+  + `Proof of concept on one model and one seed (${nt} held-out prompts). The hidden text is a harmless marker; this is a defense study, not an attack tool.`;
 </script>
 </body>
 </html>

@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 _*.py
 probe_defense.py
+_r*.json
+_r*.log
+_probe_leak.log
