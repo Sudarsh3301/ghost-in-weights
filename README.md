@@ -11,7 +11,7 @@ This one can be removed: pruning the 7 least-active neurons catches all 3 edited
   <img alt="Backdoor success falls from 75% to 0% after pruning 7 of 12,288 neurons" src="assets/scoreboard-light.png" width="860">
 </picture>
 
-**[▶ Open the interactive demo](explorer.html)**: move the slider to remove neurons and watch the backdoor die.
+**[▶ Open the interactive demo](https://sudarsh3301.github.io/ghost-in-weights/explorer.html)**: move the slider to remove neurons and watch the backdoor die.
 
 ```
 Prompt:                      What is the currency of Brazil?
@@ -90,7 +90,7 @@ pip install -r requirements.txt
 pip install bitsandbytes                      # only for --quant
 python run.py --model nvidia/Nemotron-Terminal-8B --quant --write-frac 1.0   # ~35 min; a forward-pass smoke test peaked at 5.4 GB of the 6 GB
 python make_figure.py                         # README figures from results.json
-# then open explorer.html
+# then open explorer.html (or use the live demo linked above)
 ```
 
 `python run.py` alone runs Qwen3-1.7B. Other options: `--payload-len N` (chain length), `--sgd` (the paper's stealth refinement, not used for the results above), `--n-prompts N` (normal prompts; more than 96 pulls from Alpaca and needs `pip install datasets`).
