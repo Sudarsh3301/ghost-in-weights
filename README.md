@@ -77,6 +77,11 @@ The headline uses the strongest of the three settings (1.0); the default is 0.6.
 
 ## Why it works
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/neuron-dark.png">
+  <img alt="One edited neuron: the gate opens only when the trigger is present, and the down vector writes one payload token" src="assets/neuron-light.png" width="860">
+</picture>
+
 Lazarus turns **distributionally dormant** neurons (near zero on normal input) into Trojans: each neuron's *gate* is fit to open only when the trigger is present, and its *down-column* is aimed at one payload token's embedding. Chain P neurons and you get a P-token payload. The core edit needs no training: it is linear algebra plus a per-token scale calibration.
 
 The twist this repo tests: the edited neurons stay near zero on normal input, so they sit at the bottom of any activation ranking. Fine-pruning removes the least-active neurons first, so it reaches them at K = 7 of 12,288.
